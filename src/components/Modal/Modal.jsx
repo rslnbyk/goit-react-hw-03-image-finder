@@ -1,15 +1,32 @@
 import { ModalDiv, ModalImg, ModalOverlay } from './Modal.styled';
 import PropTypes from 'prop-types';
+import { Component } from 'react';
 
-export const Modal = ({ imageLink, closeModal }) => {
-  return (
-    <ModalOverlay onClick={() => closeModal()}>
-      <ModalDiv>
-        <ModalImg src={imageLink} alt="Fullsize" />
-      </ModalDiv>
-    </ModalOverlay>
-  );
-};
+export class Modal extends Component {
+  componentDidMount() {
+    document.addEventListener('keydown', this.handleKeyDown);
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this.handleKeyDown);
+  }
+
+  handleKeyDown = e => {
+    if (e.keyCode === 27) {
+      this.props.closeModal();
+    }
+  };
+
+  render() {
+    return (
+      <ModalOverlay onClick={() => this.props.closeModal()}>
+        <ModalDiv>
+          <ModalImg src={this.props.imageLink} alt="Fullsize" />
+        </ModalDiv>
+      </ModalOverlay>
+    );
+  }
+}
 
 Modal.propTypes = {
   imageLink: PropTypes.string.isRequired,

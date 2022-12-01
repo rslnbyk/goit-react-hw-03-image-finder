@@ -1,10 +1,10 @@
 import { Component } from 'react';
 import { SearchBar } from './SearchBar/SearchBar';
-import axios from 'axios';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Button } from './Button/Button';
 import { MagnifyingGlass } from 'react-loader-spinner';
 import { Modal } from './Modal/Modal';
+import { fetchData } from 'services/api';
 
 export class App extends Component {
   state = {
@@ -16,81 +16,41 @@ export class App extends Component {
     modalImg: '',
   };
 
-  async fetchData(search, page) {
-    const response = await axios.get(
-      `https://pixabay.com/api/?q=${search
-        .split(' ')
-        .join(
-          '+'
-        )}&page=${page}&key=30059252-fce911be355cbdd889b3b7d8d&image_type=photo&orientation=horizontal&per_page=12`
-    );
-    return response.data.hits.map(img => {
-      return {
-        id: img.id,
-        webformatURL: img.webformatURL,
-        largeImageURL: img.largeImageURL,
-      };
-    });
-  }
-
-  componentDidMount() {
-    document.addEventListener('keydown', this.handleKeyDown.bind(this));
-  }
-
-  componentWillUnmount() {
-    document.removeEventListener('keydown', this.handleKeyDown.bind(this));
-  }
-
-  async componentDidUpdate() {
-    if (this.state.search && this.state.page === 1 && !this.state.isLoading) {
+  async componentDidUpdate(_, prevState) {
+    const { page, search } = this.state;
+    if (prevState.page !== page || prevState.search !== search) {
       this.setState({ isLoading: true });
-      this.setState({
-        results: await this.fetchData(this.state.search, this.state.page),
-      });
-      this.setState({ isLoading: false });
-      this.setState(prev => {
-        return {
-          page: prev.page + 1,
-        };
-      });
+      try {
+        const results = await fetchData(search, page);
+        this.setState(prev => {
+          return { results: [...prev.results, ...results] };
+        });
+      } catch (error) {
+        console.log(error.message);
+      } finally {
+        this.setState({ isLoading: false });
+      }
     }
   }
 
   showModal = link => {
-    this.setState({ modalImg: link });
-    this.setState({ showModal: true });
+    this.setState({ modalImg: link, showModal: true });
   };
 
   closeModal = () => {
     this.setState({ showModal: false });
   };
 
-  handleKeyDown = e => {
-    if (e.keyCode === 27) {
-      this.closeModal();
-    }
-  };
-
   onSubmitSearch = search => {
-    this.setState({ page: 1 });
-    this.setState({ search });
+    this.setState({ page: 1, search, results: [] });
   };
 
   async loadMore() {
-    this.setState({ isLoading: true });
-    const fetchedData = await this.fetchData(
-      this.state.search,
-      this.state.page
-    );
     this.setState(prev => {
       return {
         page: prev.page + 1,
       };
     });
-    this.setState(prev => {
-      return { results: [...prev.results, ...fetchedData] };
-    });
-    this.setState({ isLoading: false });
   }
 
   render() {
@@ -136,7 +96,9 @@ export class App extends Component {
               images={this.state.results}
               openModal={this.showModal}
             />
-            <Button onLoadMore={this.loadMore.bind(this)} />
+            {this.state.page !== 42 && (
+              <Button onLoadMore={this.loadMore.bind(this)} />
+            )}
           </>
         )}
       </>
